@@ -277,6 +277,8 @@ Swagger docs at: `http://localhost:8000/docs`
 └─────────────────────────────────────────┘
 ```
 
+![ui](image-5.png)
+
 ### Running the Frontend
 
 ```bash
