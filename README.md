@@ -310,6 +310,7 @@ The frontend is a single-page application built with React and TypeScript, style
 The interface below shows the prediction result screen after a user submits property details. The estimated price is displayed prominently with a breakdown of the inputs used.
 
 ![Application UI](assets/image-5.png)
+![Result UI](assets/image-6.png)
 
 ### Running the Frontend
 
