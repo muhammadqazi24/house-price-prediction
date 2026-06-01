@@ -104,13 +104,13 @@ Each stage feeds directly into the next — the preprocessing logic in `analysis
 
 ## Dataset
 
-| Property | Details |
-|---|---|
-| Source | Pakistan Housing Dataset (CSV) |
-| Target Variable | `price` (PKR) |
-| Cleaning | Removed prices <= 0 and top 1% outliers |
-| Dropped Columns | `property_id`, `purpose`, `date_added` |
-| Final Features | `Total_Area`, `bedrooms`, `baths`, `latitude`, `longitude`, `location`, `city`, `property_type`, `province_name` |
+| Property        | Details                                                                                                          |
+| --------------- | ---------------------------------------------------------------------------------------------------------------- |
+| Source          | Pakistan Housing Dataset (CSV)                                                                                   |
+| Target Variable | `price` (PKR)                                                                                                    |
+| Cleaning        | Removed prices <= 0 and top 1% outliers                                                                          |
+| Dropped Columns | `property_id`, `purpose`, `date_added`                                                                           |
+| Final Features  | `Total_Area`, `bedrooms`, `baths`, `latitude`, `longitude`, `location`, `city`, `property_type`, `province_name` |
 
 ---
 
@@ -134,9 +134,9 @@ Applying `log1p()` to the target variable normalizes the distribution significan
 
 Two new features were engineered from existing columns:
 
-| Feature | Formula | Rationale |
-|---|---|---|
-| `log_area` | `log1p(Total_Area)` | Reduces area skewness, improves model fit |
+| Feature      | Formula                  | Rationale                                      |
+| ------------ | ------------------------ | ---------------------------------------------- |
+| `log_area`   | `log1p(Total_Area)`      | Reduces area skewness, improves model fit      |
 | `room_ratio` | `bedrooms / (baths + 1)` | Captures room balance as a useful price signal |
 
 Categorical columns (`location`, `city`, `property_type`, `province_name`) were encoded using `pd.get_dummies(drop_first=True)`. The resulting feature columns are saved in `features.pkl` and used at inference time to ensure the input matches the training schema exactly.
@@ -147,11 +147,11 @@ Categorical columns (`location`, `city`, `property_type`, `province_name`) were 
 
 Three regression models were trained and evaluated on an 80/20 train-test split with `random_state=42`.
 
-| Model | Key Hyperparameters |
-|---|---|
-| Linear Regression | Default (sklearn) |
-| Random Forest | `n_estimators=300`, `max_depth=20`, `random_state=42` |
-| XGBoost | `n_estimators=300`, `lr=0.05`, `max_depth=6`, `subsample=0.8` |
+| Model             | Key Hyperparameters                                           |
+| ----------------- | ------------------------------------------------------------- |
+| Linear Regression | Default (sklearn)                                             |
+| Random Forest     | `n_estimators=300`, `max_depth=20`, `random_state=42`         |
+| XGBoost           | `n_estimators=300`, `lr=0.05`, `max_depth=6`, `subsample=0.8` |
 
 ---
 
@@ -174,11 +174,11 @@ XGBoost             ████████████████████
 
 ### Full Metrics
 
-| Model | R2 Score | MAE | RMSE |
-|---|---|---|---|
-| Linear Regression | 0.5339 | 0.4296 | 0.6557 |
-| Random Forest | 0.8514 | 0.1672 | 0.3703 |
-| XGBoost | 0.8656 | 0.1986 | 0.3521 |
+| Model             | R2 Score | MAE    | RMSE   |
+| ----------------- | -------- | ------ | ------ |
+| Linear Regression | 0.5339   | 0.4296 | 0.6557 |
+| Random Forest     | 0.8514   | 0.1672 | 0.3703 |
+| XGBoost           | 0.8656   | 0.1986 | 0.3521 |
 
 ![Model comparison graph](assets/image.png)
 
@@ -196,18 +196,18 @@ The chart below ranks features by their contribution to the model's predictions.
 
 ![Feature importance chart](assets/image-3.png)
 
-| Feature | Importance |
-|---|---|
-| bedrooms | 0.2849 |
-| location_encoded | 0.1721 |
-| property_type_House | 0.1100 |
-| Total_Area | 0.0834 |
-| baths | 0.0792 |
-| property_type_Flat | 0.0497 |
-| log_area | 0.0430 |
-| city_Islamabad | 0.0395 |
-| province_name_Punjab | 0.0240 |
-| property_type_Upper Portion | 0.0183 |
+| Feature                     | Importance |
+| --------------------------- | ---------- |
+| bedrooms                    | 0.2849     |
+| location_encoded            | 0.1721     |
+| property_type_House         | 0.1100     |
+| Total_Area                  | 0.0834     |
+| baths                       | 0.0792     |
+| property_type_Flat          | 0.0497     |
+| log_area                    | 0.0430     |
+| city_Islamabad              | 0.0395     |
+| province_name_Punjab        | 0.0240     |
+| property_type_Upper Portion | 0.0183     |
 
 ---
 
@@ -219,12 +219,12 @@ The backend is a lightweight REST API built with FastAPI that loads the trained 
 
 ### Endpoints
 
-| Method | Endpoint | Description |
-|---|---|---|
-| `GET` | `/` | API info and version |
+| Method | Endpoint   | Description                    |
+| ------ | ---------- | ------------------------------ |
+| `GET`  | `/`        | API info and version           |
 | `POST` | `/predict` | Returns predicted price in PKR |
-| `GET` | `/health` | Health check |
-| `GET` | `/docs` | Auto-generated Swagger UI |
+| `GET`  | `/health`  | Health check                   |
+| `GET`  | `/docs`    | Auto-generated Swagger UI      |
 
 ### Prediction Request
 
@@ -292,12 +292,12 @@ The frontend is a single-page application built with React and TypeScript, style
 
 ### Tech Stack
 
-| Technology | Purpose |
-|---|---|
-| React 18 + TypeScript | UI framework and type safety |
-| Tailwind CSS | Utility-first styling with dark theme (`stone-950`) |
-| Axios | HTTP client for communicating with the FastAPI backend |
-| Vite | Fast development server and build tool |
+| Technology            | Purpose                                                |
+| --------------------- | ------------------------------------------------------ |
+| React 18 + TypeScript | UI framework and type safety                           |
+| Tailwind CSS          | Utility-first styling with dark theme (`stone-950`)    |
+| Axios                 | HTTP client for communicating with the FastAPI backend |
+| Vite                  | Fast development server and build tool                 |
 
 ### Key Features
 
@@ -443,6 +443,4 @@ vite             # Fast build tool and development server
 
 ---
 
-Built by Muhammad Ahmad Qazi using Python, FastAPI, React, and scikit-learn.
-
-*Predictions are based on historical data and may vary from actual market prices.*
+_Predictions are based on historical data and may vary from actual market prices._
