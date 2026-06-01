@@ -5,7 +5,7 @@ import joblib
 import pandas as pd
 import numpy as np
 
-# ── App Setup ─────────────────────────────────────────────────────────────────
+# App Setup 
 app = FastAPI(
     title="Pakistan House Price Prediction API",
     description="Predicts property prices using a XGBoost model trained on Pakistan housing data.",
@@ -20,14 +20,14 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# ── Load Artifacts ─────────────────────────────────────────────────────────────
+# Load Artifacts 
 try:
     model = joblib.load("xgb.pkl")
     feature_columns = joblib.load("features.pkl")
 except FileNotFoundError as e:
     raise RuntimeError(f"Model file not found: {e}")
 
-# ── Input Schema ───────────────────────────────────────────────────────────────
+# Input Schema 
 class HouseInput(BaseModel):
     area: float        = Field(..., gt=0, description="Total area in sq ft")
     bedrooms: int      = Field(..., ge=1, description="Number of bedrooms")
@@ -54,7 +54,7 @@ class HouseInput(BaseModel):
             }
         }
 
-# ── Helper ─────────────────────────────────────────────────────────────────────
+#  Helper 
 def build_input_df(data: HouseInput) -> pd.DataFrame:
     """
     Replicates the exact preprocessing from analysis.ipynb:
@@ -88,7 +88,7 @@ def build_input_df(data: HouseInput) -> pd.DataFrame:
 
     return raw_encoded
 
-# ── Routes ─────────────────────────────────────────────────────────────────────
+# Routes 
 @app.get("/")
 def home():
     return {

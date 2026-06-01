@@ -1,6 +1,16 @@
-import React, { useState, ChangeEvent, FormEvent } from "react";
+import React, { useState, ChangeEvent, FormEvent, useEffect } from "react";
 import axios from "axios";
 import { CITIES, PROPERTY_TYPES, City } from "./data/cities";
+import {
+  LineChart,
+  Line,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  ResponsiveContainer,
+  ReferenceLine,
+} from "recharts";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 interface FormState {
@@ -133,13 +143,167 @@ function NumberInput({ value, onChange, min, placeholder }: NumberInputProps) {
   );
 }
 
+// ── Area vs Price Chart ───────────────────────────────────────────────────────
+interface AreaDataPoint {
+  area: number;
+  price: number;
+  label: string;
+}
+
+interface AreaPriceChartProps {
+  basePayload: Omit<PredictPayload, "area">;
+  currentArea: number;
+  currentPrice: number;
+}
+
+function formatLakhCrore(val: number): string {
+  if (val >= 1_00_00_000) return `${(val / 1_00_00_000).toFixed(1)}Cr`;
+  if (val >= 1_00_000) return `${(val / 1_00_000).toFixed(0)}L`;
+  return `${(val / 1000).toFixed(0)}K`;
+}
+
+function AreaPriceChart({
+  basePayload,
+  currentArea,
+  currentPrice,
+}: AreaPriceChartProps) {
+  const [chartData, setChartData] = useState<AreaDataPoint[]>([]);
+  const [chartLoading, setChartLoading] = useState(true);
+
+  // Generate 8 area points spread around the current area
+  useEffect(() => {
+    async function fetchPoints() {
+      setChartLoading(true);
+
+      const minArea = Math.max(200, Math.round(currentArea * 0.3));
+      const maxArea = Math.round(currentArea * 2.5);
+      const step = Math.round((maxArea - minArea) / 7);
+      const areas = Array.from({ length: 8 }, (_, i) => minArea + i * step);
+
+      const results = await Promise.all(
+        areas.map(async (area) => {
+          try {
+            const res = await axios.post<PredictResult>(
+              "http://localhost:8000/predict",
+              { ...basePayload, area },
+            );
+            return { area, price: res.data.predicted_price, label: `${area}` };
+          } catch {
+            return null;
+          }
+        }),
+      );
+
+      setChartData(results.filter(Boolean) as AreaDataPoint[]);
+      setChartLoading(false);
+    }
+
+    fetchPoints();
+  }, [basePayload, currentArea]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const CustomTooltip = ({ active, payload, label }: any) => {
+    if (active && payload && payload.length) {
+      return (
+        <div className="bg-stone-800 border border-stone-700 rounded-xl px-4 py-3 text-xs shadow-xl">
+          <p className="text-stone-400 mb-1">{label} sq ft</p>
+          <p className="text-amber-400 font-semibold text-sm">
+            {formatLakhCrore(payload[0].value)}
+          </p>
+        </div>
+      );
+    }
+    return null;
+  };
+
+  return (
+    <div className="bg-stone-900/60 border border-stone-800 rounded-2xl p-6 backdrop-blur-sm mt-5">
+      <p className="text-xs uppercase tracking-widest text-stone-400 font-medium mb-1">
+        Area vs Price
+      </p>
+      <p className="text-stone-500 text-xs mb-5">
+        How price changes with area — same location &amp; specs
+      </p>
+
+      {chartLoading ? (
+        <div className="flex items-center justify-center h-48 gap-2 text-stone-500 text-sm">
+          <svg className="animate-spin w-4 h-4" viewBox="0 0 24 24" fill="none">
+            <circle
+              className="opacity-25"
+              cx="12"
+              cy="12"
+              r="10"
+              stroke="currentColor"
+              strokeWidth="4"
+            />
+            <path
+              className="opacity-75"
+              fill="currentColor"
+              d="M4 12a8 8 0 018-8v8z"
+            />
+          </svg>
+          Generating chart...
+        </div>
+      ) : (
+        <ResponsiveContainer width="100%" height={220}>
+          <LineChart
+            data={chartData}
+            margin={{ top: 5, right: 10, left: 10, bottom: 5 }}
+          >
+            <CartesianGrid strokeDasharray="3 3" stroke="#292524" />
+            <XAxis
+              dataKey="area"
+              tick={{ fill: "#78716c", fontSize: 11 }}
+              tickFormatter={(v) => `${v}`}
+              label={{
+                value: "sq ft",
+                position: "insideBottomRight",
+                offset: -5,
+                fill: "#57534e",
+                fontSize: 10,
+              }}
+            />
+            <YAxis
+              tick={{ fill: "#78716c", fontSize: 11 }}
+              tickFormatter={formatLakhCrore}
+              width={48}
+            />
+            <Tooltip content={<CustomTooltip />} />
+            <ReferenceLine
+              x={currentArea}
+              stroke="#f59e0b"
+              strokeDasharray="4 3"
+              strokeWidth={1.5}
+              label={{
+                value: "You",
+                position: "top",
+                fill: "#f59e0b",
+                fontSize: 10,
+              }}
+            />
+            <Line
+              type="monotone"
+              dataKey="price"
+              stroke="#f59e0b"
+              strokeWidth={2}
+              dot={{ fill: "#f59e0b", r: 3, strokeWidth: 0 }}
+              activeDot={{ fill: "#fbbf24", r: 5, strokeWidth: 0 }}
+            />
+          </LineChart>
+        </ResponsiveContainer>
+      )}
+    </div>
+  );
+}
+
+// ── City Comparison Bar Chart ─────────────────────────────────────────────────
 // ── Result Screen ─────────────────────────────────────────────────────────────
 interface ResultScreenProps {
   result: PredictResult;
   onReset: () => void;
+  basePayload: Omit<PredictPayload, "area">;
 }
 
-function ResultScreen({ result, onReset }: ResultScreenProps) {
+function ResultScreen({ result, onReset, basePayload }: ResultScreenProps) {
   const meta = [
     { icon: "📍", label: "City", value: result.input_received.city },
     { icon: "🏠", label: "Type", value: result.input_received.property_type },
@@ -163,8 +327,7 @@ function ResultScreen({ result, onReset }: ResultScreenProps) {
       <div className="flex items-center justify-between mb-8">
         <button
           onClick={onReset}
-          className="flex items-center gap-2 text-stone-400 hover:text-stone-100
-                     text-sm transition-colors group"
+          className="flex items-center gap-2 text-stone-400 hover:text-stone-100 text-sm transition-colors group"
         >
           <svg
             className="w-4 h-4 transition-transform group-hover:-translate-x-0.5"
@@ -181,19 +344,13 @@ function ResultScreen({ result, onReset }: ResultScreenProps) {
           </svg>
           New estimate
         </button>
-        <span
-          className="text-xs font-medium bg-amber-500/15 text-amber-400
-                         px-3 py-1 rounded-full border border-amber-500/20"
-        >
+        <span className="text-xs font-medium bg-amber-500/15 text-amber-400 px-3 py-1 rounded-full border border-amber-500/20">
           Estimate ready
         </span>
       </div>
 
       {/* Price card */}
-      <div
-        className="bg-stone-900/60 border border-stone-800 rounded-2xl p-8
-                      backdrop-blur-sm text-center mb-5"
-      >
+      <div className="bg-stone-900/60 border border-stone-800 rounded-2xl p-8 backdrop-blur-sm text-center mb-4">
         <p className="text-xs uppercase tracking-widest text-amber-500/70 font-medium mb-3">
           Estimated Price
         </p>
@@ -210,8 +367,7 @@ function ResultScreen({ result, onReset }: ResultScreenProps) {
         {meta.map(({ icon, label, value }) => (
           <div
             key={label}
-            className="bg-stone-900/60 border border-stone-800 rounded-xl
-                       px-4 py-3 backdrop-blur-sm"
+            className="bg-stone-900/60 border border-stone-800 rounded-xl px-4 py-3 backdrop-blur-sm"
           >
             <p className="text-xs text-stone-500 mb-1">
               {icon} {label}
@@ -222,6 +378,13 @@ function ResultScreen({ result, onReset }: ResultScreenProps) {
           </div>
         ))}
       </div>
+
+      {/* Area vs Price Chart */}
+      <AreaPriceChart
+        basePayload={basePayload}
+        currentArea={result.input_received.area}
+        currentPrice={result.predicted_price}
+      />
 
       <p className="text-center text-stone-600 text-xs mt-6 leading-relaxed">
         Predictions are based on historical data and may vary from actual market
@@ -238,6 +401,10 @@ export default function App() {
   const [result, setResult] = useState<PredictResult | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [showResult, setShowResult] = useState<boolean>(false);
+  const [chartPayload, setChartPayload] = useState<Omit<
+    PredictPayload,
+    "area"
+  > | null>(null);
 
   const selectedCity: City | undefined = CITIES.find(
     (c) => c.name === form.city,
@@ -287,6 +454,16 @@ export default function App() {
         payload,
       );
       setResult(res.data);
+      setChartPayload({
+        bedrooms: payload.bedrooms,
+        baths: payload.baths,
+        location: payload.location,
+        city: payload.city,
+        property_type: payload.property_type,
+        latitude: payload.latitude,
+        longitude: payload.longitude,
+        province_name: payload.province_name,
+      });
       setShowResult(true);
     } catch (err) {
       if (axios.isAxiosError(err)) {
@@ -337,8 +514,12 @@ export default function App() {
 
       {/* Main */}
       <main className="relative z-10 flex-1 flex items-start justify-center px-4 py-12">
-        {showResult && result ? (
-          <ResultScreen result={result} onReset={handleReset} />
+        {showResult && result && chartPayload ? (
+          <ResultScreen
+            result={result}
+            onReset={handleReset}
+            basePayload={chartPayload}
+          />
         ) : (
           <div className="w-full max-w-2xl">
             {/* Hero */}
